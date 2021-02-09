@@ -103,18 +103,19 @@ type Request struct {
 
 // ParsedHTTPRequest a represantion of a request after it has been parsed from a user script
 type ParsedHTTPRequest struct {
-	URL          *URL
-	Body         *bytes.Buffer
-	Req          *http.Request
-	Timeout      time.Duration
-	Auth         string
-	Throw        bool
-	ResponseType ResponseType
-	Compressions []CompressionType
-	Redirects    null.Int
-	ActiveJar    *cookiejar.Jar
-	Cookies      map[string]*HTTPRequestCookie
-	Tags         map[string]string
+	URL              *URL
+	Body             *bytes.Buffer
+	Req              *http.Request
+	Timeout          time.Duration
+	Auth             string
+	Throw            bool
+	ResponseType     ResponseType
+	ResponseCallback func(int) bool
+	Compressions     []CompressionType
+	Redirects        null.Int
+	ActiveJar        *cookiejar.Jar
+	Cookies          map[string]*HTTPRequestCookie
+	Tags             map[string]string
 }
 
 // Matches non-compliant io.Closer implementations (e.g. zstd.Decoder)
@@ -139,7 +140,7 @@ func (r readCloser) Close() error {
 }
 
 func stdCookiesToHTTPRequestCookies(cookies []*http.Cookie) map[string][]*HTTPRequestCookie {
-	var result = make(map[string][]*HTTPRequestCookie, len(cookies))
+	result := make(map[string][]*HTTPRequestCookie, len(cookies))
 	for _, cookie := range cookies {
 		result[cookie.Name] = append(result[cookie.Name],
 			&HTTPRequestCookie{Name: cookie.Name, Value: cookie.Value})
@@ -249,7 +250,7 @@ func MakeRequest(ctx context.Context, preq *ParsedHTTPRequest) (*Response, error
 		}
 	}
 
-	tracerTransport := newTransport(ctx, state, tags)
+	tracerTransport := newTransport(ctx, state, tags, preq.ResponseCallback)
 	var transport http.RoundTripper = tracerTransport
 
 	// Combine tags with common log fields
@@ -381,7 +382,7 @@ func MakeRequest(ctx context.Context, preq *ParsedHTTPRequest) (*Response, error
 // SetRequestCookies sets the cookies of the requests getting those cookies both from the jar and
 // from the reqCookies map. The Replace field of the HTTPRequestCookie will be taken into account
 func SetRequestCookies(req *http.Request, jar *cookiejar.Jar, reqCookies map[string]*HTTPRequestCookie) {
-	var replacedCookies = make(map[string]struct{})
+	replacedCookies := make(map[string]struct{})
 	for key, reqCookie := range reqCookies {
 		req.AddCookie(&http.Cookie{Name: key, Value: reqCookie.Value})
 		if reqCookie.Replace {

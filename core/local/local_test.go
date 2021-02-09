@@ -335,6 +335,7 @@ func TestExecutionSchedulerSystemTags(t *testing.T) {
 		"url":    sr("HTTPBIN_IP_URL/"),
 		"proto":  "HTTP/1.1",
 		"status": "200",
+		"passed": "true",
 	})
 	expTrailPVUTagsRaw := expCommonTrailTags.CloneTags()
 	expTrailPVUTagsRaw["scenario"] = "per_vu_test"

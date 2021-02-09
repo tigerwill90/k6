@@ -81,6 +81,7 @@ func TestRunES6String(t *testing.T) {
 	})
 }
 
+// TODO replace this with the Single version
 func assertRequestMetricsEmitted(t *testing.T, sampleContainers []stats.SampleContainer, method, url, name string, status int, group string) {
 	if name == "" {
 		name = url
@@ -128,6 +129,29 @@ func assertRequestMetricsEmitted(t *testing.T, sampleContainers []stats.SampleCo
 	assert.True(t, seenSending, "url %s didn't emit Sending", url)
 	assert.True(t, seenWaiting, "url %s didn't emit Waiting", url)
 	assert.True(t, seenReceiving, "url %s didn't emit Receiving", url)
+}
+
+func assertRequestMetricsEmittedSingle(t *testing.T, sampleContainer stats.SampleContainer, expectedTags map[string]string, metrics []*stats.Metric) {
+	t.Helper()
+
+	metricMap := make(map[string]bool, len(metrics))
+	for _, m := range metrics {
+		metricMap[m.Name] = false
+	}
+	for _, sample := range sampleContainer.GetSamples() {
+		tags := sample.Tags.CloneTags()
+		v, ok := metricMap[sample.Metric.Name]
+		assert.True(t, ok, "unexpected metric %s", sample.Metric.Name)
+		assert.False(t, v, "second metric %s", sample.Metric.Name)
+		metricMap[sample.Metric.Name] = true
+		for k, v := range expectedTags {
+			assert.Equal(t, v, tags[k], "wrong tag value for %s", k)
+		}
+		assert.Equal(t, len(expectedTags), len(tags))
+	}
+	for k, v := range metricMap {
+		assert.True(t, v, "didn't emit %s", k)
+	}
 }
 
 func newRuntime(

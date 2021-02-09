@@ -43,6 +43,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/loadimpact/k6/js/common"
+	k6http "github.com/loadimpact/k6/js/modules/k6/http"
 	"github.com/loadimpact/k6/lib"
 	"github.com/loadimpact/k6/lib/consts"
 	"github.com/loadimpact/k6/lib/netext"
@@ -179,7 +180,7 @@ func (r *Runner) newVU(id int64, samplesOut chan<- stats.SampleContainer) (*VU, 
 	}
 
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: r.Bundle.Options.InsecureSkipTLSVerify.Bool,
+		InsecureSkipVerify: r.Bundle.Options.InsecureSkipTLSVerify.Bool, //nolint:gosec
 		CipherSuites:       cipherSuites,
 		MinVersion:         uint16(tlsVersions.Min),
 		MaxVersion:         uint16(tlsVersions.Max),
@@ -217,19 +218,20 @@ func (r *Runner) newVU(id int64, samplesOut chan<- stats.SampleContainer) (*VU, 
 	}
 
 	vu.state = &lib.State{
-		Logger:    vu.Runner.Logger,
-		Options:   vu.Runner.Bundle.Options,
-		Transport: vu.Transport,
-		Dialer:    vu.Dialer,
-		TLSConfig: vu.TLSConfig,
-		CookieJar: cookieJar,
-		RPSLimit:  vu.Runner.RPSLimit,
-		BPool:     vu.BPool,
-		Vu:        vu.ID,
-		Samples:   vu.Samples,
-		Iteration: vu.Iteration,
-		Tags:      vu.Runner.Bundle.Options.RunTags.CloneTags(),
-		Group:     r.defaultGroup,
+		Logger:               vu.Runner.Logger,
+		Options:              vu.Runner.Bundle.Options,
+		Transport:            vu.Transport,
+		Dialer:               vu.Dialer,
+		TLSConfig:            vu.TLSConfig,
+		CookieJar:            cookieJar,
+		RPSLimit:             vu.Runner.RPSLimit,
+		BPool:                vu.BPool,
+		Vu:                   vu.ID,
+		Samples:              vu.Samples,
+		Iteration:            vu.Iteration,
+		Tags:                 vu.Runner.Bundle.Options.RunTags.CloneTags(),
+		Group:                r.defaultGroup,
+		HTTPResponseCallback: k6http.DefaultHTTPResponseCallback(), // TODO maybe move it to lib after all :sign:
 	}
 	vu.Runtime.Set("console", common.Bind(vu.Runtime, vu.Console, vu.Context))
 
@@ -244,6 +246,7 @@ func (r *Runner) newVU(id int64, samplesOut chan<- stats.SampleContainer) (*VU, 
 	return vu, nil
 }
 
+// Setup runs the setup function if there is one and sets the setupData to the returned value
 func (r *Runner) Setup(ctx context.Context, out chan<- stats.SampleContainer) error {
 	setupCtx, setupCancel := context.WithTimeout(ctx, r.getTimeoutFor(consts.SetupFn))
 	defer setupCancel()

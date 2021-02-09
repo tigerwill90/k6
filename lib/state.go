@@ -69,6 +69,8 @@ type State struct {
 
 	Vu, Iteration int64
 	Tags          map[string]string
+
+	HTTPResponseCallback func(int) bool
 }
 
 // CloneTags makes a copy of the tags map and returns it.

@@ -39,19 +39,34 @@ type Response struct {
 	*httpext.Response `js:"-"`
 }
 
-// processResponse stores the body as an ArrayBuffer if indicated by
-// respType. This is done here instead of in httpext.readResponseBody to avoid
-// a reverse dependency on js/common or goja.
-func processResponse(ctx context.Context, resp *httpext.Response, respType httpext.ResponseType) {
-	if respType == httpext.ResponseTypeBinary {
-		rt := common.GetRuntime(ctx)
-		resp.Body = rt.NewArrayBuffer(resp.Body.([]byte))
-	}
-}
+func newResponse(ctx context.Context, resp *httpext.Response, respType httpext.ResponseType) *goja.Object {
+	rt := common.GetRuntime(ctx)
 
-func responseFromHttpext(resp *httpext.Response) *Response {
-	res := Response{resp}
-	return &res
+	getBody := rt.ToValue(func() interface{} {
+		switch respType {
+		case httpext.ResponseTypeBinary:
+			ab := rt.NewArrayBuffer(resp.Body)
+			return &ab
+		case httpext.ResponseTypeText:
+			return string(resp.Body)
+		case httpext.ResponseTypeNone:
+		default:
+			common.Throw(rt, errors.New("invalid response type"))
+		}
+		return nil
+	})
+
+	res := &Response{resp}
+	resObj := rt.ToValue(res).ToObject(rt)
+	obj := rt.NewObject()
+	if err := obj.DefineAccessorProperty("body", getBody, nil, goja.FLAG_FALSE, goja.FLAG_TRUE); err != nil {
+		common.Throw(rt, err)
+	}
+	if err := obj.SetPrototype(resObj); err != nil {
+		common.Throw(rt, err)
+	}
+
+	return obj
 }
 
 // JSON parses the body of a response as json and returns it to the goja VM
@@ -68,17 +83,7 @@ func (res *Response) JSON(selector ...string) goja.Value {
 
 // HTML returns the body as an html.Selection
 func (res *Response) HTML(selector ...string) html.Selection {
-	var body string
-	switch b := res.Body.(type) {
-	case []byte:
-		body = string(b)
-	case string:
-		body = b
-	default:
-		common.Throw(common.GetRuntime(res.GetCtx()), errors.New("invalid response type"))
-	}
-
-	sel, err := html.HTML{}.ParseHTML(res.GetCtx(), body)
+	sel, err := html.HTML{}.ParseHTML(res.GetCtx(), string(res.Body))
 	if err != nil {
 		common.Throw(common.GetRuntime(res.GetCtx()), err)
 	}
@@ -91,7 +96,8 @@ func (res *Response) HTML(selector ...string) html.Selection {
 
 // SubmitForm parses the body as an html looking for a from and then submitting it
 // TODO: document the actual arguments that can be provided
-func (res *Response) SubmitForm(args ...goja.Value) (*Response, error) {
+//nolint: funlen
+func (res *Response) SubmitForm(args ...goja.Value) (*goja.Object, error) {
 	rt := common.GetRuntime(res.GetCtx())
 
 	formSelector := "form"
@@ -177,7 +183,7 @@ func (res *Response) SubmitForm(args ...goja.Value) (*Response, error) {
 
 // ClickLink parses the body as an html, looks for a link and than makes a request as if the link was
 // clicked
-func (res *Response) ClickLink(args ...goja.Value) (*Response, error) {
+func (res *Response) ClickLink(args ...goja.Value) (*goja.Object, error) {
 	rt := common.GetRuntime(res.GetCtx())
 
 	selector := "a[href]"

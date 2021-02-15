@@ -204,6 +204,11 @@ func (pvi PerVUIterations) Run(parentCtx context.Context, out chan<- stats.Sampl
 		func(u lib.InitializedVU) {
 			pvi.executionState.ReturnVU(u, true)
 			activeVUs.Done()
+		}, &lib.ScenarioState{
+			Name:       pvi.config.Name,
+			Executor:   pvi.config.Type,
+			StartTime:  startTime,
+			ProgressFn: progressFn,
 		})
 
 	handleVU := func(initVU lib.InitializedVU) {

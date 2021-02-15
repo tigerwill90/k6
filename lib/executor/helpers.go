@@ -221,11 +221,11 @@ func getArrivalRatePerSec(scaledArrivalRate *big.Rat) *big.Rat {
 }
 
 func getVUActivationParams(
-	ctx context.Context, conf BaseConfig, deactivateCallback func(lib.InitializedVU),
+	ctx context.Context, conf BaseConfig, deactivateCallback func(lib.InitializedVU), ss *lib.ScenarioState,
 ) *lib.VUActivationParams {
 	return &lib.VUActivationParams{
 		RunContext:         ctx,
-		Scenario:           conf.Name,
+		ScenarioState:      ss,
 		Exec:               conf.GetExec(),
 		Env:                conf.GetEnv(),
 		Tags:               conf.GetTags(),

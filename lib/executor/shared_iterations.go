@@ -236,6 +236,11 @@ func (si SharedIterations) Run(parentCtx context.Context, out chan<- stats.Sampl
 		func(u lib.InitializedVU) {
 			si.executionState.ReturnVU(u, true)
 			activeVUs.Done()
+		}, &lib.ScenarioState{
+			Name:       si.config.Name,
+			Executor:   si.config.Type,
+			StartTime:  startTime,
+			ProgressFn: progressFn,
 		})
 	handleVU := func(initVU lib.InitializedVU) {
 		ctx, cancel := context.WithCancel(maxDurationCtx)

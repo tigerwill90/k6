@@ -361,7 +361,13 @@ func (rs *externallyControlledRunState) newManualVUHandle(
 	}
 	ctx, cancel := context.WithCancel(rs.ctx)
 	return &manualVUHandle{
-		vuHandle: newStoppedVUHandle(ctx, getVU, returnVU, &rs.executor.config.BaseConfig, logger),
+		vuHandle: newStoppedVUHandle(ctx, getVU, returnVU, &rs.executor.config.BaseConfig, &lib.ScenarioState{
+			Name:     rs.executor.config.Name,
+			Executor: rs.executor.config.Type,
+			// TODO: Get proper start time. Is this even relevant for this executor?
+			StartTime:  time.Time{},
+			ProgressFn: rs.progressFn,
+		}, logger),
 		initVU:   initVU,
 		wg:       &wg,
 		cancelVU: cancel,

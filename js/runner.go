@@ -592,11 +592,12 @@ func (u *VU) Activate(params *lib.VUActivationParams) lib.ActiveVU {
 		u.state.Tags["group"] = u.state.Group.Path
 	}
 	if opts.SystemTags.Has(stats.TagScenario) {
-		u.state.Tags["scenario"] = params.Scenario
+		u.state.Tags["scenario"] = params.ScenarioState.Name
 	}
 
 	params.RunContext = common.WithRuntime(params.RunContext, u.Runtime)
 	params.RunContext = lib.WithState(params.RunContext, u.state)
+	params.RunContext = lib.WithScenarioState(params.RunContext, params.ScenarioState)
 	*u.Context = params.RunContext
 
 	avu := &ActiveVU{

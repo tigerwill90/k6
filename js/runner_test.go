@@ -2038,6 +2038,20 @@ func TestExecutionStats(t *testing.T) {
 		var exec = require('k6/execution');
 		exec.getScenarioStats();
 		`, "scenario information can only be returned from an exported function"},
+		{"test_ok", `
+		var exec = require('k6/execution');
+
+		exports.default = function() {
+			var ts = exec.getTestStats();
+			if (ts.vus_active !== 1) throw new Error('unexpected vus_active: '+ts.vus_active);
+			if (ts.vus_max !== 0) throw new Error('unexpected vus_max: '+ts.vus_max);
+			if (ts.iterations_completed !== 0) throw new Error('unexpected iterations_completed: '+ts.iterations_completed);
+			if (ts.iterations_interrupted !== 0) throw new Error('unexpected iterations_interrupted: '+ts.iterations_interrupted);
+		}`, ""},
+		{"test_err", `
+		var exec = require('k6/execution');
+		exec.getTestStats();
+		`, "test information can only be returned from an exported function"},
 	}
 
 	for _, tc := range testCases {
@@ -2055,8 +2069,13 @@ func TestExecutionStats(t *testing.T) {
 			initVU, err := r.newVU(1, samples)
 			require.NoError(t, err)
 
+			execScheduler, err := local.NewExecutionScheduler(r, testutils.NewLogger(t))
+			require.NoError(t, err)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+			ctx = lib.WithExecutionState(ctx, execScheduler.GetState())
+
 			vu := initVU.Activate(&lib.VUActivationParams{
 				RunContext: ctx,
 				Exec:       "default",
@@ -2070,6 +2089,8 @@ func TestExecutionStats(t *testing.T) {
 				},
 			})
 
+			execState := execScheduler.GetState()
+			execState.ModCurrentlyActiveVUsCount(+1)
 			err = vu.RunOnce()
 			assert.NoError(t, err)
 		})

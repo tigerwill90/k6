@@ -76,7 +76,7 @@ func (*HTTP) ExpectedStatuses(ctx context.Context, args ...goja.Value) *expected
 			common.Throw(rt, fmt.Errorf("argument number %d to expectedStatuses was neither an integer nor an object like {min:100, max:329}", i+1))
 		}
 
-		if o.ClassName() == "Number" {
+		if checkNumber(arg, rt) {
 			result.exact = append(result.exact, int(o.ToInteger()))
 		} else {
 			min := o.Get("min")
@@ -96,8 +96,9 @@ func (*HTTP) ExpectedStatuses(ctx context.Context, args ...goja.Value) *expected
 }
 
 func checkNumber(a goja.Value, rt *goja.Runtime) bool {
-	o := a.ToObject(rt)
-	return o != nil && o.ClassName() == "Number"
+	c, _ := goja.AssertFunction(rt.GlobalObject().Get("Number").ToObject(rt).Get("isInteger"))
+	v, err := c(goja.Undefined(), a)
+	return err == nil && v.ToBoolean()
 }
 
 // SetResponseCallback ..

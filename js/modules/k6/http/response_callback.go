@@ -73,7 +73,7 @@ func (*HTTP) ExpectedStatuses(ctx context.Context, args ...goja.Value) *expected
 		o := arg.ToObject(rt)
 		if o == nil {
 			//nolint:lll
-			common.Throw(rt, fmt.Errorf("argument number %d to expectedStatuses was neither an integer nor a an object like {min:100, max:329}", i+1))
+			common.Throw(rt, fmt.Errorf("argument number %d to expectedStatuses was neither an integer nor an object like {min:100, max:329}", i+1))
 		}
 
 		if o.ClassName() == "Number" {
@@ -83,7 +83,7 @@ func (*HTTP) ExpectedStatuses(ctx context.Context, args ...goja.Value) *expected
 			max := o.Get("max")
 			if min == nil || max == nil {
 				//nolint:lll
-				common.Throw(rt, fmt.Errorf("argument number %d to expectedStatuses was neither an integer nor a an object like {min:100, max:329}", i+1))
+				common.Throw(rt, fmt.Errorf("argument number %d to expectedStatuses was neither an integer nor an object like {min:100, max:329}", i+1))
 			}
 			if !(checkNumber(min, rt) && checkNumber(max, rt)) {
 				common.Throw(rt, fmt.Errorf("both min and max need to be number for argument number %d", i+1))

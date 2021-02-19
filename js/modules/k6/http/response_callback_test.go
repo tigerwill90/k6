@@ -108,17 +108,6 @@ func TestResponseCallbackInAction(t *testing.T) {
 	tb, state, samples, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
-	allHTTPMetrics := []*stats.Metric{
-		metrics.HTTPReqs,
-		metrics.HTTPReqFailed,
-		metrics.HTTPReqBlocked,
-		metrics.HTTPReqConnecting,
-		metrics.HTTPReqDuration,
-		metrics.HTTPReqReceiving,
-		metrics.HTTPReqSending,
-		metrics.HTTPReqWaiting,
-		metrics.HTTPReqTLSHandshaking,
-	}
 
 	HTTPMetricsWithoutFailed := []*stats.Metric{
 		metrics.HTTPReqs,
@@ -130,6 +119,9 @@ func TestResponseCallbackInAction(t *testing.T) {
 		metrics.HTTPReqSending,
 		metrics.HTTPReqTLSHandshaking,
 	}
+
+	allHTTPMetrics := append(HTTPMetricsWithoutFailed, metrics.HTTPReqFailed)
+
 	testCases := map[string]struct {
 		code            string
 		expectedSamples []expectedSample

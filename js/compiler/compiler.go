@@ -53,11 +53,11 @@ var (
 			// "transform-es2015-for-of", // in goja
 			// "transform-es2015-sticky-regex", // in goja
 			// "transform-es2015-unicode-regex", // in goja
-			"check-es2015-constants",
+			// "check-es2015-constants", // in goja
 			[]interface{}{"transform-es2015-spread", map[string]interface{}{"loose": false}},
 			"transform-es2015-parameters",
 			[]interface{}{"transform-es2015-destructuring", map[string]interface{}{"loose": false}},
-			"transform-es2015-block-scoping", // let/const which particularly slow on big inputs
+			// "transform-es2015-block-scoping", // in goja
 			// "transform-es2015-typeof-symbol", // in goja
 			// all the other module plugins are just dropped
 			[]interface{}{"transform-es2015-modules-commonjs", map[string]interface{}{"loose": false}},

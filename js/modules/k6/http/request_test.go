@@ -144,10 +144,7 @@ func assertRequestMetricsEmittedSingle(t *testing.T, sampleContainer stats.Sampl
 		assert.True(t, ok, "unexpected metric %s", sample.Metric.Name)
 		assert.False(t, v, "second metric %s", sample.Metric.Name)
 		metricMap[sample.Metric.Name] = true
-		for k, v := range expectedTags {
-			assert.Equal(t, v, tags[k], "wrong tag value for %s", k)
-		}
-		assert.Equal(t, len(expectedTags), len(tags))
+		assert.EqualValues(t, expectedTags, tags, "%s", tags)
 	}
 	for k, v := range metricMap {
 		assert.True(t, v, "didn't emit %s", k)

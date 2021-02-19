@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/dop251/goja"
@@ -354,6 +355,74 @@ func TestResponseCallbackInActionWithoutPassedTag(t *testing.T) {
 	tags["url"] = sr("HTTPBIN_URL/get")
 	tags["name"] = tags["url"]
 	tags["status"] = "200"
+	assertRequestMetricsEmittedSingle(t, bufSamples[1], tags, allHTTPMetrics, func(sample stats.Sample) {
+		if sample.Metric.Name == metrics.HTTPReqFailed.Name {
+			require.EqualValues(t, sample.Value, 0)
+		}
+	})
+}
+
+func TestDigestWithResponseCallback(t *testing.T) {
+	t.Parallel()
+	tb, state, samples, rt, _ := newRuntime(t)
+	defer tb.Cleanup()
+
+	state.HTTPResponseCallback = DefaultHTTPResponseCallback()
+
+	urlWithCreds := tb.Replacer.Replace(
+		"http://testuser:testpwd@HTTPBIN_IP:HTTPBIN_PORT/digest-auth/auth/testuser/testpwd",
+	)
+
+	allHTTPMetrics := []*stats.Metric{
+		metrics.HTTPReqs,
+		metrics.HTTPReqFailed,
+		metrics.HTTPReqBlocked,
+		metrics.HTTPReqConnecting,
+		metrics.HTTPReqDuration,
+		metrics.HTTPReqReceiving,
+		metrics.HTTPReqSending,
+		metrics.HTTPReqWaiting,
+		metrics.HTTPReqTLSHandshaking,
+	}
+	_, err := rt.RunString(fmt.Sprintf(`
+		var res = http.get(%q,  { auth: "digest" });
+		if (res.status !== 200) { throw new Error("wrong status: " + res.status); }
+		if (res.error_code !== 0) { throw new Error("wrong error code: " + res.error_code); }
+	`, urlWithCreds))
+	require.NoError(t, err)
+	bufSamples := stats.GetBufferedSamples(samples)
+
+	reqsCount := 0
+	for _, container := range bufSamples {
+		for _, sample := range container.GetSamples() {
+			if sample.Metric.Name == "http_reqs" {
+				reqsCount++
+			}
+		}
+	}
+
+	require.Equal(t, 2, reqsCount)
+
+	urlRaw := tb.Replacer.Replace(
+		"http://HTTPBIN_IP:HTTPBIN_PORT/digest-auth/auth/testuser/testpwd")
+
+	tags := map[string]string{
+		"method":     "GET",
+		"url":        urlRaw,
+		"name":       urlRaw,
+		"status":     "401",
+		"group":      "",
+		"proto":      "HTTP/1.1",
+		"passed":     "true",
+		"error_code": "1401",
+	}
+	assertRequestMetricsEmittedSingle(t, bufSamples[0], tags, allHTTPMetrics, func(sample stats.Sample) {
+		if sample.Metric.Name == metrics.HTTPReqFailed.Name {
+			require.EqualValues(t, sample.Value, 0)
+		}
+	})
+	tags["status"] = "200"
+	delete(tags, "error_code")
 	assertRequestMetricsEmittedSingle(t, bufSamples[1], tags, allHTTPMetrics, func(sample stats.Sample) {
 		if sample.Metric.Name == metrics.HTTPReqFailed.Name {
 			require.EqualValues(t, sample.Value, 0)

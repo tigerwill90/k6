@@ -35,7 +35,13 @@ var (
 func Get(name string) interface{} {
 	mx.RLock()
 	defer mx.RUnlock()
-	return modules[name]
+	mod := modules[name]
+	if i, ok := mod.(interface {
+		NewGlobalModule() interface{ NewModuleInstance() interface{} }
+	}); ok {
+		return i.NewGlobalModule().NewModuleInstance()
+	}
+	return mod
 }
 
 // Register the given mod as a JavaScript module, available

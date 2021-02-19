@@ -41,7 +41,7 @@ func TestExpectedStatuses(t *testing.T) {
 	ctx := context.Background()
 
 	ctx = common.WithRuntime(ctx, rt)
-	rt.Set("http", common.Bind(rt, New(), &ctx))
+	rt.Set("http", common.Bind(rt, new(RootModule).NewGlobalModule().NewModuleInstance(), &ctx))
 	cases := map[string]struct {
 		code, err string
 		expected  expectedStatuses
@@ -107,9 +107,11 @@ type expectedSample struct {
 
 func TestResponseCallbackInAction(t *testing.T) {
 	t.Parallel()
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, _, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
+	httpModule := new(RootModule).NewGlobalModule().NewModuleInstance().(*HTTP)
+	rt.Set("http", common.Bind(rt, httpModule, ctx))
 
 	HTTPMetricsWithoutFailed := []*stats.Metric{
 		metrics.HTTPReqs,
@@ -280,7 +282,7 @@ func TestResponseCallbackInAction(t *testing.T) {
 	for name, testCase := range testCases {
 		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			state.HTTPResponseCallback = DefaultHTTPResponseCallback()
+			httpModule.responseCallback = defaultExpectedStatuses.match
 
 			_, err := rt.RunString(sr(testCase.code))
 			assert.NoError(t, err)
@@ -306,7 +308,7 @@ func TestResponseCallbackInAction(t *testing.T) {
 
 func TestResponseCallbackInActionWithoutPassedTag(t *testing.T) {
 	t.Parallel()
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, state, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
 	allHTTPMetrics := []*stats.Metric{
@@ -321,8 +323,8 @@ func TestResponseCallbackInActionWithoutPassedTag(t *testing.T) {
 		metrics.HTTPReqTLSHandshaking,
 	}
 	deleteSystemTag(state, stats.TagPassed.String())
-
-	state.HTTPResponseCallback = DefaultHTTPResponseCallback()
+	httpModule := new(RootModule).NewGlobalModule().NewModuleInstance().(*HTTP)
+	rt.Set("http", common.Bind(rt, httpModule, ctx))
 
 	_, err := rt.RunString(sr(`http.request("GET", "HTTPBIN_URL/redirect/1", null, {responseCallback: http.expectedStatuses(200)});`))
 	assert.NoError(t, err)
@@ -364,10 +366,11 @@ func TestResponseCallbackInActionWithoutPassedTag(t *testing.T) {
 
 func TestDigestWithResponseCallback(t *testing.T) {
 	t.Parallel()
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, _, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
 
-	state.HTTPResponseCallback = DefaultHTTPResponseCallback()
+	httpModule := new(RootModule).NewGlobalModule().NewModuleInstance().(*HTTP)
+	rt.Set("http", common.Bind(rt, httpModule, ctx))
 
 	urlWithCreds := tb.Replacer.Replace(
 		"http://testuser:testpwd@HTTPBIN_IP:HTTPBIN_PORT/digest-auth/auth/testuser/testpwd",

@@ -113,7 +113,7 @@ func (h *HTTP) Request(ctx context.Context, method string, url goja.Value, args 
 	if err != nil {
 		return nil, err
 	}
-	return responseFromHttpext(resp), nil
+	return h.responseFromHttpext(resp), nil
 }
 
 //TODO break this function up
@@ -139,7 +139,7 @@ func (h *HTTP) parseRequest(
 		Redirects:        state.Options.MaxRedirects,
 		Cookies:          make(map[string]*httpext.HTTPRequestCookie),
 		Tags:             make(map[string]string),
-		ResponseCallback: state.HTTPResponseCallback,
+		ResponseCallback: h.responseCallback,
 	}
 
 	if state.Options.DiscardResponseBodies.Bool {
@@ -388,7 +388,7 @@ func (h *HTTP) prepareBatchArray(
 			ParsedHTTPRequest: parsedReq,
 			Response:          response,
 		}
-		results[i] = &Response{response}
+		results[i] = h.responseFromHttpext(response)
 	}
 
 	return batchReqs, results, nil
@@ -412,7 +412,7 @@ func (h *HTTP) prepareBatchObject(
 			ParsedHTTPRequest: parsedReq,
 			Response:          response,
 		}
-		results[key] = &Response{response}
+		results[key] = h.responseFromHttpext(response)
 		i++
 	}
 

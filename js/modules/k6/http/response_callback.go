@@ -27,17 +27,11 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/loadimpact/k6/js/common"
-	"github.com/loadimpact/k6/lib"
 )
 
 //nolint:gochecknoglobals
 var defaultExpectedStatuses = expectedStatuses{
 	minmax: [][2]int{{200, 399}},
-}
-
-// DefaultHTTPResponseCallback ...
-func DefaultHTTPResponseCallback() func(int) bool {
-	return defaultExpectedStatuses.match
 }
 
 type expectedStatuses struct {
@@ -102,10 +96,15 @@ func checkNumber(a goja.Value, rt *goja.Runtime) bool {
 }
 
 // SetResponseCallback ..
-func (h HTTP) SetResponseCallback(ctx context.Context, es *expectedStatuses) {
-	if es != nil {
-		lib.GetState(ctx).HTTPResponseCallback = es.match
+func (h *HTTP) SetResponseCallback(ctx context.Context, val goja.Value) {
+	if val != nil && !goja.IsNull(val) {
+		if es, ok := val.Export().(*expectedStatuses); ok {
+			h.responseCallback = es.match
+		} else {
+			//nolint:golint
+			common.Throw(common.GetRuntime(ctx), fmt.Errorf("unsupported argument, expected http.expectedStatuses"))
+		}
 	} else {
-		lib.GetState(ctx).HTTPResponseCallback = nil
+		h.responseCallback = nil
 	}
 }

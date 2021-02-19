@@ -26,6 +26,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/loadimpact/k6/js/common"
+	"github.com/loadimpact/k6/lib"
 	"github.com/loadimpact/k6/lib/metrics"
 	"github.com/loadimpact/k6/stats"
 	"github.com/stretchr/testify/assert"
@@ -296,8 +297,76 @@ func TestResponseCallbackInAction(t *testing.T) {
 			require.Equal(t, len(testCase.expectedSamples), reqsCount)
 
 			for i, expectedSample := range testCase.expectedSamples {
-				assertRequestMetricsEmittedSingle(t, bufSamples[i], expectedSample.tags, expectedSample.metrics)
+				assertRequestMetricsEmittedSingle(t, bufSamples[i], expectedSample.tags, expectedSample.metrics, nil)
 			}
 		})
 	}
+}
+
+func TestResponseCallbackInActionWithoutPassedTag(t *testing.T) {
+	t.Parallel()
+	tb, state, samples, rt, _ := newRuntime(t)
+	defer tb.Cleanup()
+	sr := tb.Replacer.Replace
+	allHTTPMetrics := []*stats.Metric{
+		metrics.HTTPReqs,
+		metrics.HTTPReqFailed,
+		metrics.HTTPReqBlocked,
+		metrics.HTTPReqConnecting,
+		metrics.HTTPReqDuration,
+		metrics.HTTPReqReceiving,
+		metrics.HTTPReqSending,
+		metrics.HTTPReqWaiting,
+		metrics.HTTPReqTLSHandshaking,
+	}
+	deleteSystemTag(state, stats.TagPassed.String())
+
+	state.HTTPResponseCallback = DefaultHTTPResponseCallback()
+
+	_, err := rt.RunString(sr(`http.request("GET", "HTTPBIN_URL/redirect/1", null, {responseCallback: http.expectedStatuses(200)});`))
+	assert.NoError(t, err)
+	bufSamples := stats.GetBufferedSamples(samples)
+
+	reqsCount := 0
+	for _, container := range bufSamples {
+		for _, sample := range container.GetSamples() {
+			if sample.Metric.Name == "http_reqs" {
+				reqsCount++
+			}
+		}
+	}
+
+	require.Equal(t, 2, reqsCount)
+
+	tags := map[string]string{
+		"method": "GET",
+		"url":    sr("HTTPBIN_URL/redirect/1"),
+		"name":   sr("HTTPBIN_URL/redirect/1"),
+		"status": "302",
+		"group":  "",
+		"proto":  "HTTP/1.1",
+	}
+	assertRequestMetricsEmittedSingle(t, bufSamples[0], tags, allHTTPMetrics, func(sample stats.Sample) {
+		if sample.Metric.Name == metrics.HTTPReqFailed.Name {
+			require.EqualValues(t, sample.Value, 1)
+		}
+	})
+	tags["url"] = sr("HTTPBIN_URL/get")
+	tags["name"] = tags["url"]
+	tags["status"] = "200"
+	assertRequestMetricsEmittedSingle(t, bufSamples[1], tags, allHTTPMetrics, func(sample stats.Sample) {
+		if sample.Metric.Name == metrics.HTTPReqFailed.Name {
+			require.EqualValues(t, sample.Value, 0)
+		}
+	})
+}
+
+func deleteSystemTag(state *lib.State, tag string) {
+	enabledTags := state.Options.SystemTags.Map()
+	delete(enabledTags, tag)
+	tagsList := make([]string, 0, len(enabledTags))
+	for k := range enabledTags {
+		tagsList = append(tagsList, k)
+	}
+	state.Options.SystemTags = stats.ToSystemTagSet(tagsList)
 }

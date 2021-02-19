@@ -175,14 +175,14 @@ func (t *transport) measureAndEmitMetrics(unfReq *unfinishedRequest) *finishedRe
 			statusCode = unfReq.response.StatusCode
 		}
 		passed := t.responseCallback(statusCode)
+		if passed {
+			failed = 0
+		} else {
+			failed = 1
+		}
+
 		if enabledTags.Has(stats.TagPassed) {
-			if passed {
-				failed = 0
-				tags[stats.TagPassed.String()] = "true"
-			} else {
-				tags[stats.TagPassed.String()] = "false"
-				failed = 1
-			}
+			tags[stats.TagPassed.String()] = strconv.FormatBool(passed)
 		}
 	}
 

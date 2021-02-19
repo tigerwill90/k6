@@ -131,7 +131,7 @@ func assertRequestMetricsEmitted(t *testing.T, sampleContainers []stats.SampleCo
 	assert.True(t, seenReceiving, "url %s didn't emit Receiving", url)
 }
 
-func assertRequestMetricsEmittedSingle(t *testing.T, sampleContainer stats.SampleContainer, expectedTags map[string]string, metrics []*stats.Metric) {
+func assertRequestMetricsEmittedSingle(t *testing.T, sampleContainer stats.SampleContainer, expectedTags map[string]string, metrics []*stats.Metric, callback func(sample stats.Sample)) {
 	t.Helper()
 
 	metricMap := make(map[string]bool, len(metrics))
@@ -145,6 +145,9 @@ func assertRequestMetricsEmittedSingle(t *testing.T, sampleContainer stats.Sampl
 		assert.False(t, v, "second metric %s", sample.Metric.Name)
 		metricMap[sample.Metric.Name] = true
 		assert.EqualValues(t, expectedTags, tags, "%s", tags)
+		if callback != nil {
+			callback(sample)
+		}
 	}
 	for k, v := range metricMap {
 		assert.True(t, v, "didn't emit %s", k)

@@ -44,7 +44,7 @@ var (
 			"transform-es2015-literals",
 			"transform-es2015-function-name",
 			[]interface{}{"transform-es2015-arrow-functions", map[string]interface{}{"spec": false}},
-			"transform-es2015-block-scoped-functions",
+			// "transform-es2015-block-scoped-functions", // in goja
 			[]interface{}{"transform-es2015-classes", map[string]interface{}{"loose": false}},
 			"transform-es2015-object-super",
 			// "transform-es2015-shorthand-properties", // in goja

@@ -78,7 +78,7 @@ func TestInitContextRequire(t *testing.T) {
 				assert.Equal(t, "abc123", exports.Get("dummy").String())
 			}
 
-			k6 := bi.Runtime.Get("_k6").ToObject(bi.Runtime)
+			k6 := exports.Get("_k6").ToObject(bi.Runtime)
 			if assert.NotNil(t, k6) {
 				_, groupOk := goja.AssertFunction(k6.Get("group"))
 				assert.True(t, groupOk, "k6.group is not a function")
@@ -287,7 +287,7 @@ func TestInitContextOpen(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			assert.Equal(t, string(tc.content), bi.Runtime.Get("data").Export())
+			assert.Equal(t, string(tc.content), bi.Runtime.Get("exports").ToObject(bi.Runtime).Get("data").Export())
 		})
 	}
 
@@ -297,7 +297,7 @@ func TestInitContextOpen(t *testing.T) {
 			return
 		}
 		bytes := []byte{104, 105, 33, 15, 255, 1}
-		assert.Equal(t, bytes, bi.Runtime.Get("data").Export())
+		assert.Equal(t, bytes, bi.Runtime.Get("exports").ToObject(bi.Runtime).Get("data").Export())
 	})
 
 	testdata := map[string]string{

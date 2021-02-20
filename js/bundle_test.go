@@ -160,7 +160,7 @@ func TestNewBundle(t *testing.T) {
 				{
 					"Promise", "base",
 					`module.exports.default = function() {}; new Promise(function(resolve, reject){});`,
-					"ReferenceError: Promise is not defined at file:///script.js:1:45(5)",
+					"ReferenceError: Promise is not defined at file:///script.js:1:45(4)",
 				},
 			}
 
@@ -703,7 +703,7 @@ func TestBundleInstantiate(t *testing.T) {
 			vus: 5,
 			teardownTimeout: '1s',
 		};
-		let val = true;
+		export let val = true;
 		export default function() { return val; }
 	`)
 	if !assert.NoError(t, err) {
@@ -724,7 +724,7 @@ func TestBundleInstantiate(t *testing.T) {
 	})
 
 	t.Run("SetAndRun", func(t *testing.T) {
-		bi.Runtime.Set("val", false)
+		bi.Runtime.Get("exports").ToObject(bi.Runtime).Set("val", false)
 		v, err := bi.exports[consts.DefaultFn](goja.Undefined())
 		if assert.NoError(t, err) {
 			assert.Equal(t, false, v.Export())
@@ -733,7 +733,7 @@ func TestBundleInstantiate(t *testing.T) {
 
 	t.Run("Options", func(t *testing.T) {
 		// Ensure `options` properties are correctly marshalled
-		jsOptions := bi.Runtime.Get("options").ToObject(bi.Runtime)
+		jsOptions := bi.Runtime.Get("exports").ToObject(bi.Runtime).Get("options").ToObject(bi.Runtime)
 		vus := jsOptions.Get("vus").Export()
 		assert.Equal(t, int64(5), vus)
 		tdt := jsOptions.Get("teardownTimeout").Export()
@@ -744,7 +744,7 @@ func TestBundleInstantiate(t *testing.T) {
 		b.Options.VUs = null.IntFrom(10)
 		bi2, err := b.Instantiate(logger, 0)
 		assert.NoError(t, err)
-		jsOptions = bi2.Runtime.Get("options").ToObject(bi2.Runtime)
+		jsOptions = bi2.Runtime.Get("exports").ToObject(bi2.Runtime).Get("options").ToObject(bi2.Runtime)
 		vus = jsOptions.Get("vus").Export()
 		assert.Equal(t, int64(10), vus)
 		b.Options.VUs = optOrig
